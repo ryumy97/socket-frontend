@@ -8,14 +8,18 @@ import {
   InferGetServerSidePropsType,
   NextPage,
 } from "next";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 const User: NextPage<InferGetServerSidePropsType<typeof getStaticProps>> = (
   props
 ) => {
   const { id } = props;
 
+  console.log(id);
+
   const { socket, isConnected } = useSocket("/user");
+
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (socket && isConnected) {
@@ -26,23 +30,35 @@ const User: NextPage<InferGetServerSidePropsType<typeof getStaticProps>> = (
   }, [id, isConnected, socket]);
 
   useEffect(() => {
-    if (socket && isConnected) {
-      const onMouseMove = (event: MouseEvent) => {
-        sendData(socket, "mouse-location", {
-          x: event.clientX,
-          y: event.clientY,
-        });
-      };
+    const button = buttonRef.current;
 
-      window.addEventListener("mousemove", onMouseMove);
+    if (button) {
+      if (socket && isConnected) {
+        const onClick = (event: MouseEvent) => {
+          console.log("click");
 
-      return () => {
-        window.removeEventListener("mousemove", onMouseMove);
-      };
+          sendData(socket, "tap", {
+            id: "hello",
+          });
+        };
+
+        button.addEventListener("click", onClick);
+
+        return () => {
+          button.removeEventListener("click", onClick);
+        };
+      }
     }
-  }, [socket, isConnected]);
+  }, [socket, isConnected, id]);
 
-  return <>???</>;
+  return (
+    <button
+      className="flex h-screen w-screen items-center justify-center"
+      ref={buttonRef}
+    >
+      click me
+    </button>
+  );
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
@@ -58,8 +74,6 @@ export const getStaticProps: GetStaticProps = async (context) => {
   const data = (await fetch(`${url}/room`).then((res) =>
     res.json()
   )) as string[];
-
-  console.log(data);
 
   const id = context?.params?.id as string;
 

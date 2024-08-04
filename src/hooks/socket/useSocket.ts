@@ -1,50 +1,62 @@
-import { useEffect, useState } from 'react';
-import { Socket, io } from 'socket.io-client';
+import { useEffect, useState } from "react";
+import { Socket, io } from "socket.io-client";
 
 const useSocket = (namespace: string, shoudConnect: boolean = true) => {
-    const [socket, setSocket] = useState<Socket | null>(null);
-    const [isConnected, setIsConnected] = useState(socket?.connected);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(socket?.connected);
 
-    useEffect(() => {
-        if (shoudConnect) {
-            const url = process.env.NEXT_PUBLIC_SOCKET_URL;
+  useEffect(() => {
+    if (shoudConnect) {
+      const url = process.env.NEXT_PUBLIC_SOCKET_URL;
 
-            const socket = io(`${url}${namespace}`, {
-                secure: true,
-            });
+      const socket = io(`${url}${namespace}`, {
+        secure: true,
+        rejectUnauthorized: false,
+      });
 
-            setSocket(socket);
-            socket.connect();
+      socket.on("connect_error", (err) => {
+        // the reason of the error, for example "xhr poll error"
+        console.log(err.message);
 
-            return () => {
-                socket.disconnect();
-            };
-        }
-    }, [namespace, shoudConnect]);
+        // some additional description, for example the status code of the initial HTTP response
+        console.log(err.description);
 
-    useEffect(() => {
-        if (shoudConnect) {
-            const onConnect = () => {
-                console.log('connect');
-                setIsConnected(true);
-            };
+        // some additional context, for example the XMLHttpRequest object
+        console.log(err.context);
+      });
 
-            const onDisconnect = () => {
-                console.log('disconnect');
-                setIsConnected(false);
-            };
+      setSocket(socket);
+      socket.connect();
 
-            socket?.on('connect', onConnect);
-            socket?.on('disconnect', onDisconnect);
+      return () => {
+        socket.disconnect();
+      };
+    }
+  }, [namespace, shoudConnect]);
 
-            return () => {
-                socket?.off('connect', onConnect);
-                socket?.off('disconnect', onDisconnect);
-            };
-        }
-    }, [shoudConnect, socket]);
+  useEffect(() => {
+    if (shoudConnect) {
+      const onConnect = () => {
+        console.log("connect");
+        setIsConnected(true);
+      };
 
-    return { socket, isConnected };
+      const onDisconnect = () => {
+        console.log("disconnect");
+        setIsConnected(false);
+      };
+
+      socket?.on("connect", onConnect);
+      socket?.on("disconnect", onDisconnect);
+
+      return () => {
+        socket?.off("connect", onConnect);
+        socket?.off("disconnect", onDisconnect);
+      };
+    }
+  }, [shoudConnect, socket]);
+
+  return { socket, isConnected };
 };
 
 export default useSocket;
